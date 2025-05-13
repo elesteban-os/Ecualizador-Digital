@@ -5,6 +5,9 @@ import pyqtgraph as pg
 import pyaudio
 from scipy.fftpack import fft
 
+from filtersdata import getFilterData
+from iir_filter import iir_filter
+
 import sys
 
 
@@ -67,6 +70,11 @@ class AudioStream(object):
         self.x = np.arange(0, self.CHUNK)
         self.f = np.linspace(0, self.RATE / 2, int(self.CHUNK / 2))
 
+        # filter stuff
+        self.lpfilter_path = 'filtros/pasabajas.fcf'
+        self.lpfilter_data = getFilterData(self.lpfilter_path)
+        self.lpfilter = iir_filter(b=self.lpfilter_data[0], a=self.lpfilter_data[1])
+
     def start(self):
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
             QtWidgets.QApplication.instance().exec_()
@@ -92,6 +100,9 @@ class AudioStream(object):
         wf_data = wf_data
         self.set_plotdata(name='waveform', data_x=self.x, data_y=wf_data)
 
+        # Apply filter
+        wf_data = self.lpfilter.filter(wf_data)
+
         sp_data = fft(np.array(wf_data, dtype='int16') - 128)
         sp_data = np.abs(sp_data[0:int(self.CHUNK / 2)]
                          ) * 2 / (128 * self.CHUNK)
@@ -104,15 +115,6 @@ class AudioStream(object):
         timer.timeout.connect(self.update)
         timer.start(20)
         self.start()
-
-    def iir_filter(self, data):
-        # --- Filtro digital: y[n] = a * x[n] + (1 - a) * y[n-1] ---
-        a = 0.1  # Coeficiente del filtro (ajusta entre 0 y 1)
-        y = np.zeros_like(data, dtype=float)
-        y[0] = data[0]
-        for n in range(1, len(data)):
-            y[n] = a * data[n] + (1 - a) * y[n-1]
-        filtered_data = y.astype(np.int16)
 
 
 
