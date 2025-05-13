@@ -1,13 +1,11 @@
 import numpy as np
-from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
+from pyqtgraph.Qt import QtCore, QtWidgets
 import pyqtgraph as pg
 
-import struct
 import pyaudio
 from scipy.fftpack import fft
 
 import sys
-import time
 
 
 class AudioStream(object):
@@ -22,17 +20,23 @@ class AudioStream(object):
         self.win.setGeometry(5, 115, 1910, 1070)
         self.win.show()
 
-        wf_xlabels = [(0, '0'), (2048, '2048'), (4096, '4096')]
+        wf_xlabels = [(0, '0'), (1024, '1024'), (2048, '2048')]
         wf_xaxis = pg.AxisItem(orientation='bottom')
         wf_xaxis.setTicks([wf_xlabels])
 
-        wf_ylabels = [(0, '0'), (127, '128'), (255, '255')]
+        wf_ylabels = [
+            (-32768, '-32768'),
+            (-16384, '-16384'),
+            (0, '0'),
+            (16384, '16384'),
+            (32767, '32767')
+        ]
         wf_yaxis = pg.AxisItem(orientation='left')
         wf_yaxis.setTicks([wf_ylabels])
 
         sp_xlabels = [
             (np.log10(10), '10'), (np.log10(100), '100'),
-            (np.log10(1000), '1000'), (np.log10(22050), '22050')
+            (np.log10(1000), '1000'), (np.log10(10000), '10000'), (np.log10(22050), '22050')
         ]
         sp_xaxis = pg.AxisItem(orientation='bottom')
         sp_xaxis.setTicks([sp_xlabels])
@@ -60,7 +64,7 @@ class AudioStream(object):
             frames_per_buffer=self.CHUNK,
         )
         # waveform and spectrum x points
-        self.x = np.arange(0, 2 * self.CHUNK, 2)
+        self.x = np.arange(0, self.CHUNK)
         self.f = np.linspace(0, self.RATE / 2, int(self.CHUNK / 2))
 
     def start(self):
@@ -73,12 +77,12 @@ class AudioStream(object):
         else:
             if name == 'waveform':
                 self.traces[name] = self.waveform.plot(pen='c', width=3)
-                self.waveform.setYRange(0, 255, padding=0)
-                self.waveform.setXRange(0, 2 * self.CHUNK, padding=0.005)
+                self.waveform.setYRange(-32767, 32767, padding=0)
+                self.waveform.setXRange(0, self.CHUNK, padding=0.005)
             if name == 'spectrum':
                 self.traces[name] = self.spectrum.plot(pen='m', width=3)
                 self.spectrum.setLogMode(x=True, y=True)
-                self.spectrum.setYRange(-4, 0, padding=0)
+                self.spectrum.setYRange(-4, 2, padding=0)
                 self.spectrum.setXRange(
                     np.log10(20), np.log10(self.RATE / 2), padding=0.005)
 
