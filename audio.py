@@ -97,11 +97,23 @@ class AudioStream(object):
                          ) * 2 / (128 * self.CHUNK)
         self.set_plotdata(name='spectrum', data_x=self.f, data_y=sp_data)
 
+        #self.stream.write(wf_data, self.CHUNK)
+
     def animation(self):
         timer = QtCore.QTimer()
         timer.timeout.connect(self.update)
         timer.start(20)
         self.start()
+
+    def iir_filter(self, data):
+        # --- Filtro digital: y[n] = a * x[n] + (1 - a) * y[n-1] ---
+        a = 0.1  # Coeficiente del filtro (ajusta entre 0 y 1)
+        y = np.zeros_like(data, dtype=float)
+        y[0] = data[0]
+        for n in range(1, len(data)):
+            y[n] = a * data[n] + (1 - a) * y[n-1]
+        filtered_data = y.astype(np.int16)
+
 
 
 if __name__ == '__main__':
