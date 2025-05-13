@@ -5,7 +5,7 @@ import pyqtgraph as pg
 import pyaudio
 from scipy.fftpack import fft
 
-from filtersdata import getFilterData
+from filter_data import getFilterData
 from iir_filter import iir_filter
 
 import sys
@@ -71,9 +71,21 @@ class AudioStream(object):
         self.f = np.linspace(0, self.RATE / 2, int(self.CHUNK / 2))
 
         # filter stuff
-        self.lpfilter_path = 'filtros/pasabajas.fcf'
+        self.lpfilter_path = 'filtros/pasa_bajas.fcf'
         self.lpfilter_data = getFilterData(self.lpfilter_path)
         self.lpfilter = iir_filter(b=self.lpfilter_data[0], a=self.lpfilter_data[1])
+
+        self.hpfilter_path = 'filtros/pasa_altas.fcf'
+        self.hpfilter_data = getFilterData(self.hpfilter_path)
+        self.hpfilter = iir_filter(b=self.hpfilter_data[0], a=self.hpfilter_data[1])
+
+        self.bpfilter_path = 'filtros/pasa_bandas.fcf'
+        self.bpfilter_data = getFilterData(self.bpfilter_path)
+        self.bpfilter = iir_filter(b=self.bpfilter_data[0], a=self.bpfilter_data[1])
+
+        self.sbfilter_path = 'filtros/suprime_bandas.fcf'
+        self.sbfilter_data = getFilterData(self.sbfilter_path)
+        self.sbfilter = iir_filter(b=self.sbfilter_data[0], a=self.sbfilter_data[1])
 
     def start(self):
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
@@ -95,19 +107,22 @@ class AudioStream(object):
                     np.log10(20), np.log10(self.RATE / 2), padding=0.005)
 
     def update(self):
+        # Read data
         wf_data = self.stream.read(self.CHUNK, exception_on_overflow=False)
         wf_data = np.frombuffer(wf_data, dtype=np.int16)
-        wf_data = wf_data
-        self.set_plotdata(name='waveform', data_x=self.x, data_y=wf_data)
-
+        
         # Apply filter
-        wf_data = self.lpfilter.filter(wf_data)
+        wf_data = self.sbfilter.filter(wf_data)
+
+        # Plot data
+        self.set_plotdata(name='waveform', data_x=self.x, data_y=wf_data)
 
         sp_data = fft(np.array(wf_data, dtype='int16') - 128)
         sp_data = np.abs(sp_data[0:int(self.CHUNK / 2)]
                          ) * 2 / (128 * self.CHUNK)
         self.set_plotdata(name='spectrum', data_x=self.f, data_y=sp_data)
-
+        
+        # Write data
         #self.stream.write(wf_data, self.CHUNK)
 
     def animation(self):
