@@ -1,5 +1,6 @@
 import numpy as np
 from pyqtgraph.Qt import QtCore, QtWidgets
+
 import pyqtgraph as pg
 
 import pyaudio
@@ -7,6 +8,8 @@ from scipy.fftpack import fft
 
 from filter_data import getFilterData
 from iir_filter import iir_filter
+
+from filtros.config_low_pass import lowPassConfig
 
 import sys
 
@@ -22,6 +25,7 @@ class AudioStream(object):
         self.win.setWindowTitle('Spectrum Analyzer')
         self.win.setGeometry(5, 115, 1910, 1070)
         self.win.show()
+
 
         wf_xlabels = [(0, '0'), (1024, '1024'), (2048, '2048')]
         wf_xaxis = pg.AxisItem(orientation='bottom')
@@ -87,9 +91,12 @@ class AudioStream(object):
         self.sbfilter_data = getFilterData(self.sbfilter_path)
         self.sbfilter = iir_filter(b=self.sbfilter_data[0], a=self.sbfilter_data[1])
 
+        self.lpcfilter_data = lowPassConfig(1000)
+        self.lpcfilter = iir_filter(b=self.lpcfilter_data[0], a=self.lpcfilter_data[1])
+
     def start(self):
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-            QtWidgets.QApplication.instance().exec_()
+            QtWidgets.QApplication.instance().exec()
 
     def set_plotdata(self, name, data_x, data_y):
         if name in self.traces:
@@ -108,11 +115,13 @@ class AudioStream(object):
 
     def update(self):
         # Read data
+        import scipy.signal as signal
+
         wf_data = self.stream.read(self.CHUNK, exception_on_overflow=False)
         wf_data = np.frombuffer(wf_data, dtype=np.int16)
         
         # Apply filter
-        wf_data = self.sbfilter.filter(wf_data)
+        wf_data = self.lpcfilter.filter(wf_data)
 
         # Plot data
         self.set_plotdata(name='waveform', data_x=self.x, data_y=wf_data)
@@ -123,12 +132,12 @@ class AudioStream(object):
         self.set_plotdata(name='spectrum', data_x=self.f, data_y=sp_data)
         
         # Write data
-        #self.stream.write(wf_data, self.CHUNK)
+        self.stream.write(wf_data.astype(np.int16).tobytes(), self.CHUNK)
 
     def animation(self):
         timer = QtCore.QTimer()
         timer.timeout.connect(self.update)
-        timer.start(20)
+        timer.start(0)
         self.start()
 
 
