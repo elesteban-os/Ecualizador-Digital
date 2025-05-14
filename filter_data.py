@@ -49,8 +49,4 @@ def getFilterData(filter_path):
     # Obteer el orden del filtro
     n = len(b) - 1
 
-    print(b)
-    print(a)
-    print(n)
-
     return b, a, n

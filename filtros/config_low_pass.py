@@ -1,6 +1,4 @@
-from scipy.signal import butter, tf2sos, cheby2
-import numpy as np
-import matplotlib.pyplot as plt
+from scipy.signal import butter, cheby2
 
 def lowPassConfig(fc, N = 8, fs = 44100):
     wn = fc / (fs / 2)
